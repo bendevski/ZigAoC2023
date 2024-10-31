@@ -20,7 +20,8 @@ pub fn q1() !u32 {
     return summer;
 }
 
-/// Assumes that there is at least 2 digits in
+/// Gets the first and last digit present in a string
+/// Note: Assumes that there is at least 2 digits in
 /// the string. If there is 1 it will output giberish
 /// if there are none it'll error out.
 fn first_and_last_digit(line: []u8) u8 {
