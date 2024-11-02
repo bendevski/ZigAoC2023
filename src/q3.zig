@@ -2,7 +2,6 @@ const std = @import("std");
 const print = std.debug.print;
 
 pub fn q3() !u32 {
-    //Q2 uses the same txt as q1
     var file = try std.fs.cwd().openFile("src/d2.txt", .{});
     defer file.close();
 
