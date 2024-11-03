@@ -13,12 +13,13 @@ pub fn main() !usize {
     // each line is going to go into this buffer
     var buf: [1024]u8 = undefined;
 
-    // summer times
     var whole_thing = std.ArrayList([]u8).init(std.heap.page_allocator);
     var symbol_locations = std.ArrayList(MapPoint).init(std.heap.page_allocator);
     var i: usize = 0;
     while (try stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        // Save the whole map for later use
         whole_thing.append(std.mem.Allocator.dupe(std.heap.page_allocator, u8, line) catch unreachable) catch unreachable;
+        // Save an array of all the symbols
         symbol_locations.appendSlice(locations_of_gears(i, line)) catch unreachable;
         i += 1;
     }
@@ -50,6 +51,7 @@ fn locations_of_gears(line_num: usize, line: []u8) []MapPoint {
 
 // find the sum of numbers around a point
 // could be more memory efficient by only using three lines at a time
+// if the number of ns is not 2 returns 0
 fn get_total_around_point(loc: MapPoint, whole_thing: [][]u8) usize {
     var i: i4 = -1;
     var n_of_ns: u8 = 0;
