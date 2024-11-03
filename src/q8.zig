@@ -71,15 +71,23 @@ fn string_to_bool_array(line: []const u8) []u1 {
     return std.heap.page_allocator.dupe(u1, &bool_arr) catch unreachable;
 }
 
+// Calculate the number of cards Card [card_number] is worth
 fn process_card(solution_map: *std.hash_map.AutoHashMap(u8, usize), map: *std.hash_map.AutoHashMap(u8, u8), card_number: u8) usize {
+    // If we've already calculated the value of this card, just return the value
     const possible_solution = solution_map.get(card_number);
     if (possible_solution != null) return possible_solution orelse unreachable;
+    // The number of copies we're adding
     const self_number = map.get(card_number) orelse unreachable;
+    // The actual value of this card is 1 (the card itself) + the numbers that each copy brings in
     var i: u4 = 1;
     var acc: usize = 1;
+    // Calculate how many cards each one of the copies we're processing is worth
+    // and add each one to our own value of 1
     while (i <= self_number) : (i += 1) {
         acc += process_card(solution_map, map, card_number + i);
     }
+    // Save this cards value in case it needs to be used as a copy in the future
+    // This guarantees we'll never have to calculate the value of the same card twice
     solution_map.put(card_number, acc) catch unreachable;
     return acc;
 }
