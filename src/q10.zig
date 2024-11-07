@@ -121,7 +121,6 @@ fn follow_seed(arr: *[][][]u128, starting: u128, luft: u128, step: u8) u128 {
         const cur_bottom = follow_seed(arr, opt_arr_slice[iterator][0], opt_arr_slice[iterator][1], step + 1);
         if (acc > cur_bottom) {
             acc = cur_bottom;
-            std.debug.print("step: {d} -> {d} -> {d}\n", .{ step, opt_arr_slice[iterator][0], cur_bottom });
         }
     }
     return acc;
@@ -173,7 +172,7 @@ fn exclude_range(available_min: u128, available_max: u128, band_min: u128, band_
     if (available_max <= band_max) {
         var full_output = std.heap.page_allocator.alloc([]u128, 1) catch unreachable;
         output[0] = available_min;
-        output[1] = band_min;
+        output[1] = band_min - available_min - 1;
         full_output[0] = output;
         return full_output;
     }
