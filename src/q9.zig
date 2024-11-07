@@ -88,6 +88,5 @@ fn follow_seed(arr: *[][][]usize, starting: usize) usize {
             }
         }
     }
-    std.debug.print("\n", .{});
     return cur;
 }
