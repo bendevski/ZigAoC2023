@@ -14,7 +14,15 @@ pub fn main() !u128 {
     const distance = (stream.readUntilDelimiter(&buf, '\n') catch unreachable);
     const tuple = time_and_distance_to_tuples(time, distance);
     var acc: usize = 1;
+    var acc_1: usize = 1;
+    const brute_before = std.time.nanoTimestamp();
     acc = calculate_tuple_values(tuple);
+    const brute_after = std.time.nanoTimestamp();
+    const binary_before = std.time.nanoTimestamp();
+    acc_1 = caclulate_tuple_value_binary(tuple);
+    const binary_after = std.time.nanoTimestamp();
+    // HIGHLIGHT APPROXIMATE, just nice to see the scale difference
+    std.debug.print("brute: {d} nanoseconds \nbinary: {d} nanoseconds", .{ brute_after - brute_before, binary_after - binary_before });
     return acc;
 }
 
@@ -69,4 +77,39 @@ fn calculate_tuple_values(tuple: []usize) usize {
         }
     }
     return acc;
+}
+
+// Let's try a more optimized version
+fn caclulate_tuple_value_binary(tuple: []usize) usize {
+    const bottom = binary_lower_bound(1, tuple[0] - 1, tuple[0], tuple[1]);
+    const top = binary_upper_bound(bottom, tuple[0] - 1, tuple[0], tuple[1]);
+    return top - bottom;
+}
+
+fn binary_lower_bound(lower: usize, upper: usize, time: usize, distance: usize) usize {
+    if (time - lower > distance / lower) {
+        return lower;
+    }
+    const mid: usize = (lower + upper) / 2;
+    if (time - mid > distance / mid) {
+        return binary_lower_bound(lower, mid, time, distance);
+    }
+    if (upper == mid + 1) {
+        return upper;
+    }
+    return binary_lower_bound(mid, upper, time, distance);
+}
+
+fn binary_upper_bound(lower: usize, upper: usize, time: usize, distance: usize) usize {
+    if (time - lower <= distance / lower) {
+        return lower;
+    }
+    const mid: usize = (lower + upper) / 2;
+    if (time - mid <= distance / mid) {
+        return binary_upper_bound(lower, mid, time, distance);
+    }
+    if (upper == mid + 1) {
+        return upper;
+    }
+    return binary_upper_bound(mid, upper, time, distance);
 }
