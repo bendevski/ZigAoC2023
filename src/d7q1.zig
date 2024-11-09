@@ -1,7 +1,7 @@
 const std = @import("std");
 const page_allocator = std.heap.page_allocator;
 
-const HandDetails = struct { bid: u16, power: u8, value: usize };
+const HandDetails = struct { bid: u16, power: u8, value: usize, hand: []const u8 };
 pub fn main() !usize {
     const fp = try std.fs.cwd().openFile("src/d7.txt", .{});
     defer fp.close();
@@ -20,8 +20,8 @@ pub fn main() !usize {
     var i: u16 = 0;
     const hands_len = hands_arr.len;
     var acc: usize = 0;
-    std.debug.print("{any}\n", .{hands_arr});
     while (i < hands_len) : (i += 1) {
+        std.debug.print("{s}\n", .{hands_arr[i].hand});
         acc += (hands_len - i) * hands_arr[i].bid;
     }
     return acc;
@@ -30,15 +30,16 @@ pub fn main() !usize {
 fn parse_line(line: []u8) HandDetails {
     var main_it = std.mem.splitSequence(u8, line, " ");
     const cards = main_it.next() orelse unreachable;
+    const for_saving = page_allocator.dupe(u8, cards) catch unreachable;
     const bid = std.fmt.parseInt(u16, main_it.next() orelse unreachable, 10) catch unreachable;
     var hand_value: usize = 0;
     var card_it: u8 = 0;
     while (card_it < 5) : (card_it += 1) {
         var cur_value: usize = switch (cards[card_it]) {
-            'K' => 14,
-            'Q' => 13,
-            'J' => 12,
-            'A' => 11,
+            'A' => 14,
+            'K' => 13,
+            'Q' => 12,
+            'J' => 11,
             'T' => 10,
             else => 0,
         };
@@ -62,12 +63,14 @@ fn parse_line(line: []u8) HandDetails {
     std.sort.heap(u8, &arr, {}, std.sort.desc(u8));
     var power: u8 = 0;
     if (arr[0] == 5) {
-        power = 6;
+        power = 7;
     } else if (arr[0] == 4) {
-        power = 5;
+        power = 6;
     } else if (arr[0] == 3 and arr[1] == 2) {
-        power = 4;
+        power = 5;
     } else if (arr[0] == 3) {
+        power = 4;
+    } else if (arr[0] == 2 and arr[1] == 2) {
         power = 3;
     } else if (arr[0] == 2) {
         power = 2;
@@ -75,7 +78,7 @@ fn parse_line(line: []u8) HandDetails {
         power = 1;
     }
 
-    return HandDetails{ .bid = bid, .power = power, .value = hand_value };
+    return HandDetails{ .bid = bid, .power = power, .value = hand_value, .hand = for_saving };
 }
 
 fn compare_hands(_: void, lhs: HandDetails, rhs: HandDetails) bool {
