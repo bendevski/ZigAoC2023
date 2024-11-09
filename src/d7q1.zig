@@ -21,7 +21,6 @@ pub fn main() !usize {
     const hands_len = hands_arr.len;
     var acc: usize = 0;
     while (i < hands_len) : (i += 1) {
-        std.debug.print("{s}\n", .{hands_arr[i].hand});
         acc += (hands_len - i) * hands_arr[i].bid;
     }
     return acc;
