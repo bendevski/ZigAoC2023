@@ -2,7 +2,8 @@ const std = @import("std");
 const print = std.debug.print;
 const page_allocator = std.heap.page_allocator;
 var arena_allocator = std.heap.ArenaAllocator.init(page_allocator);
-
+var empty_cols: []bool = undefined;
+var empty_rows: []bool = undefined;
 pub fn main() !u64 {
     //Q2 uses the same txt as q1
     var file = try std.fs.cwd().openFile("src/d11.txt", .{});
@@ -13,15 +14,16 @@ pub fn main() !u64 {
 
     // summer times
     var lines = std.ArrayList([]u8).init(arena_allocator.allocator());
+    var empty_row_alist = std.ArrayList(bool).init(arena_allocator.allocator());
     // will be used to optimize expansion
     var row_len: u16 = 0;
-    var are_empty_cols: []bool = undefined;
-
     while (try stream.readUntilDelimiterOrEofAlloc(arena_allocator.allocator(), '\n', 141)) |line| {
+        // If row has a galaxy then this will be set to false
+        var is_row_empty = true;
         if (row_len == 0) {
             row_len = @intCast(line.len);
-            are_empty_cols = arena_allocator.allocator().alloc(bool, line.len) catch unreachable;
-            @memset(are_empty_cols, true);
+            empty_cols = arena_allocator.allocator().alloc(bool, line.len) catch unreachable;
+            @memset(empty_cols, true);
         }
         var i: u16 = 0;
         var has_galaxy = false;
@@ -29,47 +31,31 @@ pub fn main() !u64 {
             if (line[i] != '.') {
                 has_galaxy = true;
                 // marking which cols have galaxies
-                are_empty_cols[i] = false;
+                is_row_empty = false;
+                empty_cols[i] = false;
             }
         }
-        // If there's no galaxies here just expand the column
-        if (!has_galaxy) lines.append(line) catch unreachable;
         lines.append(line) catch unreachable;
+        empty_row_alist.append(is_row_empty) catch unreachable;
     }
-    const lines_arr = lines.toOwnedSlice() catch unreachable;
-    var expanded_lines = std.ArrayList([]u8).init(arena_allocator.allocator());
+    empty_rows = empty_row_alist.toOwnedSlice() catch unreachable;
+    var lines_arr = @constCast(lines.toOwnedSlice() catch unreachable);
+    var acc: u64 = 0;
     var i: u16 = 0;
     while (i < lines_arr.len) : (i += 1) {
         var j: u16 = 0;
-        var current_line_expanded = std.ArrayList(u8).init(arena_allocator.allocator());
         while (j < lines_arr[i].len) : (j += 1) {
-            // if the current column doesn't have a galaxy, expand it
-            if (are_empty_cols[j]) {
-                current_line_expanded.append('.') catch unreachable;
-            }
-            current_line_expanded.append(lines_arr[i][j]) catch unreachable;
-        }
-        const current_line_expanded_arr = current_line_expanded.toOwnedSlice() catch unreachable;
-        expanded_lines.append(current_line_expanded_arr) catch unreachable;
-    }
-    var expanded_lines_arr = @constCast(expanded_lines.toOwnedSlice() catch unreachable);
-    var acc: u32 = 0;
-    i = 0;
-    while (i < expanded_lines_arr.len) : (i += 1) {
-        var j: u16 = 0;
-        while (j < expanded_lines_arr[i].len) : (j += 1) {
-            if (expanded_lines_arr[i][j] != '.')
-                acc += findAllDistancesAndDeleteGalaxy(i, j, &expanded_lines_arr);
+            if (lines_arr[i][j] != '.')
+                acc += findAllDistancesAndDeleteGalaxy(i, j, &lines_arr);
         }
     }
     i = 0;
-    while (i < expanded_lines_arr.len) : (i += 1) std.debug.print("{s}\n", .{expanded_lines_arr[i]});
     return acc;
 }
 
-const LLData = struct { row: u16, col: u16, step: u16 };
+const LLData = struct { row: u16, col: u16, step: u64 };
 const LL = std.DoublyLinkedList(LLData);
-fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u32 {
+fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u64 {
     var visited: [][]bool = arena_allocator.allocator().alloc([]bool, map.len) catch unreachable;
     var i: u16 = 0;
     while (i < visited.len) : (i += 1) {
@@ -80,7 +66,7 @@ fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u32 {
     var to_visit = LL{};
     const first_node = arena_allocator.allocator().create(LL.Node) catch unreachable;
     const data = arena_allocator.allocator().create(LLData) catch unreachable;
-    var step_acc: u32 = 0;
+    var step_acc: u64 = 0;
     data.row = row;
     data.col = col;
     data.step = 0;
@@ -105,7 +91,9 @@ fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u32 {
             var nodata = arena_allocator.allocator().create(LLData) catch unreachable;
             nodata.row = crow - 1;
             nodata.col = ccol;
-            nodata.step = cstep + 1;
+            if (empty_rows[nodata.row]) {
+                nodata.step = cstep + 1000000;
+            } else nodata.step = cstep + 1;
             node.data = nodata.*;
             to_visit.append(node);
         }
@@ -114,7 +102,9 @@ fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u32 {
             var nodata = arena_allocator.allocator().create(LLData) catch unreachable;
             nodata.row = crow + 1;
             nodata.col = ccol;
-            nodata.step = cstep + 1;
+            if (empty_rows[nodata.row]) {
+                nodata.step = cstep + 1000000;
+            } else nodata.step = cstep + 1;
             node.data = nodata.*;
             to_visit.append(node);
         }
@@ -123,7 +113,9 @@ fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u32 {
             var nodata = arena_allocator.allocator().create(LLData) catch unreachable;
             nodata.row = crow;
             nodata.col = ccol - 1;
-            nodata.step = cstep + 1;
+            if (empty_cols[nodata.col]) {
+                nodata.step = cstep + 1000000;
+            } else nodata.step = cstep + 1;
             node.data = nodata.*;
             to_visit.append(node);
         }
@@ -132,7 +124,9 @@ fn findAllDistancesAndDeleteGalaxy(row: u16, col: u16, map: *[][]u8) u32 {
             var nodata = arena_allocator.allocator().create(LLData) catch unreachable;
             nodata.row = crow;
             nodata.col = ccol + 1;
-            nodata.step = cstep + 1;
+            if (empty_cols[nodata.col]) {
+                nodata.step = cstep + 1000000;
+            } else nodata.step = cstep + 1;
             node.data = nodata.*;
             to_visit.append(node);
         }
