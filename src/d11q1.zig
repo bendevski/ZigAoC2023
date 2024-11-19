@@ -4,6 +4,7 @@ const page_allocator = std.heap.page_allocator;
 var arena_allocator = std.heap.ArenaAllocator.init(page_allocator);
 
 pub fn main() !u64 {
+    defer arena_allocator.deinit();
     //Q2 uses the same txt as q1
     var file = try std.fs.cwd().openFile("src/d11.txt", .{});
     defer file.close();
@@ -63,7 +64,6 @@ pub fn main() !u64 {
         }
     }
     i = 0;
-    while (i < expanded_lines_arr.len) : (i += 1) std.debug.print("{s}\n", .{expanded_lines_arr[i]});
     return acc;
 }
 

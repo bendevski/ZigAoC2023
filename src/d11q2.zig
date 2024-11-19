@@ -5,6 +5,7 @@ var arena_allocator = std.heap.ArenaAllocator.init(page_allocator);
 var empty_cols: []bool = undefined;
 var empty_rows: []bool = undefined;
 pub fn main() !u64 {
+    defer arena_allocator.deinit();
     //Q2 uses the same txt as q1
     var file = try std.fs.cwd().openFile("src/d11.txt", .{});
     defer file.close();
